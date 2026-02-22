@@ -156,7 +156,24 @@ app.get('/api/products/trending-collection', async (req, res) => {
 
 app.get('/api/products/most-popular', async (req, res) => {
   try {
-    const products = await Product.find().sort({ sold: -1 }).limit(20);
+    // Saree-first most popular list for HomeScreen.
+    let products = await Product.find({
+      $or: [
+        { subcategory: { $regex: '^sarees?$', $options: 'i' } },
+        { subCategory: { $regex: '^sarees?$', $options: 'i' } },
+        { name: { $regex: 'saree', $options: 'i' } },
+      ],
+    })
+      .sort({ sold: -1, rating: -1, createdAt: -1 })
+      .limit(20);
+
+    // Fallback: if saree-tagged products are missing, return popular products.
+    if (!products || products.length === 0) {
+      products = await Product.find({ isPopular: true })
+        .sort({ sold: -1, rating: -1, createdAt: -1 })
+        .limit(20);
+    }
+
     res.json(products);
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
