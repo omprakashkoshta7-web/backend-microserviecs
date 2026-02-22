@@ -125,10 +125,20 @@ app.get('/api/products/search', async (req, res) => {
 
 app.get('/api/products/high-quality-beauty', async (req, res) => {
   try {
-    const products = await Product.find({
+    let products = await Product.find({
       category: 'Beauty',
       $or: [{ isFeatured: true }, { isHighQuality: true }],
     }).limit(20);
+
+    // Fallback: if quality flags are missing in DB, still return beauty products.
+    if (!products || products.length === 0) {
+      products = await Product.find({
+        category: { $regex: '^beauty$', $options: 'i' },
+      })
+        .sort({ rating: -1, sold: -1, createdAt: -1 })
+        .limit(20);
+    }
+
     res.json(products);
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
