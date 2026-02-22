@@ -1,4 +1,4 @@
-const { sendEmail, sendOrderConfirmation } = require('../../services/emailService');
+const { sendEmail, sendOrderConfirmation } = require('./emailService');
 
 module.exports = {
   sendEmail,
