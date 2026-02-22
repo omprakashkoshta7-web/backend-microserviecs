@@ -1,0 +1,30 @@
+{
+  "name": "ecommerce-microservices",
+  "version": "1.0.0",
+  "private": true,
+  "description": "E-Commerce microservices scaffold",
+  "main": "gateway/server.js",
+  "scripts": {
+    "start:gateway": "node gateway/server.js",
+    "start:auth": "node services/auth/server.js",
+    "start:catalog": "node services/catalog/server.js",
+    "start:orders": "node services/orders/server.js",
+    "start:payments": "node services/payments/server.js",
+    "start:notifications": "node services/notifications/server.js",
+    "start:admin": "node services/admin/server.js"
+  },
+  "dependencies": {
+    "axios": "^1.13.5",
+    "bcryptjs": "^2.4.3",
+    "body-parser": "^1.20.2",
+    "compression": "^1.8.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "http-proxy-middleware": "^2.0.6",
+    "jsonwebtoken": "^9.0.2",
+    "mongodb": "^6.12.0",
+    "mongoose": "^9.1.6",
+    "nodemailer": "^8.0.1"
+  }
+}

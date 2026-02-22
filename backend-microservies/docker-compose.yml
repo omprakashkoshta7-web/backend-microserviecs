@@ -1,0 +1,131 @@
+version: '3.9'
+
+services:
+  mongo:
+    image: mongo:6
+    container_name: ecommerce-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  auth:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ecommerce-auth
+    command: node services/auth/server.js
+    environment:
+      - AUTH_PORT=5001
+      - MONGODB_URI=mongodb://mongo:27017/ecommerce
+      - JWT_SECRET=${JWT_SECRET}
+    ports:
+      - "5001:5001"
+    depends_on:
+      - mongo
+
+  catalog:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ecommerce-catalog
+    command: node services/catalog/server.js
+    environment:
+      - CATALOG_PORT=5002
+      - MONGODB_URI=mongodb://mongo:27017/ecommerce
+      - JWT_SECRET=${JWT_SECRET}
+    ports:
+      - "5002:5002"
+    depends_on:
+      - mongo
+
+  orders:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ecommerce-orders
+    command: node services/orders/server.js
+    environment:
+      - ORDERS_PORT=5003
+      - MONGODB_URI=mongodb://mongo:27017/ecommerce
+      - JWT_SECRET=${JWT_SECRET}
+    ports:
+      - "5003:5003"
+    depends_on:
+      - mongo
+
+  payments:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ecommerce-payments
+    command: node services/payments/server.js
+    environment:
+      - PAYMENTS_PORT=5004
+      - MONGODB_URI=mongodb://mongo:27017/ecommerce
+      - JWT_SECRET=${JWT_SECRET}
+    ports:
+      - "5004:5004"
+    depends_on:
+      - mongo
+
+  notifications:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ecommerce-notifications
+    command: node services/notifications/server.js
+    environment:
+      - NOTIFICATIONS_PORT=5005
+      - MONGODB_URI=mongodb://mongo:27017/ecommerce
+      - JWT_SECRET=${JWT_SECRET}
+      - EMAIL_USER=${EMAIL_USER}
+      - EMAIL_PASSWORD=${EMAIL_PASSWORD}
+      - RESEND_API_KEY=${RESEND_API_KEY}
+      - EMAIL_FROM=${EMAIL_FROM}
+    ports:
+      - "5005:5005"
+    depends_on:
+      - mongo
+
+  admin:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ecommerce-admin
+    command: node services/admin/server.js
+    environment:
+      - ADMIN_PORT=5006
+      - MONGODB_URI=mongodb://mongo:27017/ecommerce
+      - JWT_SECRET=${JWT_SECRET}
+    ports:
+      - "5006:5006"
+    depends_on:
+      - mongo
+
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ecommerce-gateway
+    command: node gateway/server.js
+    environment:
+      - GATEWAY_PORT=5000
+      - AUTH_SERVICE_URL=http://auth:5001
+      - CATALOG_SERVICE_URL=http://catalog:5002
+      - ORDERS_SERVICE_URL=http://orders:5003
+      - PAYMENTS_SERVICE_URL=http://payments:5004
+      - NOTIFICATIONS_SERVICE_URL=http://notifications:5005
+      - ADMIN_SERVICE_URL=http://admin:5006
+    ports:
+      - "5000:5000"
+    depends_on:
+      - auth
+      - catalog
+      - orders
+      - payments
+      - notifications
+      - admin
+
+volumes:
+  mongo_data:

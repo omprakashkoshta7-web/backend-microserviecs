@@ -1,0 +1,118 @@
+services:
+  - name: ecommerce-gateway
+    type: web
+    runtime: docker
+    rootDir: .
+    dockerfilePath: Dockerfile
+    dockerContext: .
+    dockerCommand: node gateway/server.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: JWT_SECRET
+        sync: false
+      - key: MONGODB_URI
+        sync: false
+      - key: AUTH_SERVICE_URL
+        sync: false
+      - key: CATALOG_SERVICE_URL
+        sync: false
+      - key: ORDERS_SERVICE_URL
+        sync: false
+      - key: PAYMENTS_SERVICE_URL
+        sync: false
+      - key: NOTIFICATIONS_SERVICE_URL
+        sync: false
+      - key: ADMIN_SERVICE_URL
+        sync: false
+
+  - name: ecommerce-auth
+    type: web
+    runtime: docker
+    rootDir: .
+    dockerfilePath: Dockerfile
+    dockerContext: .
+    dockerCommand: node services/auth/server.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: JWT_SECRET
+        sync: false
+      - key: MONGODB_URI
+        sync: false
+
+  - name: ecommerce-catalog
+    type: web
+    runtime: docker
+    rootDir: .
+    dockerfilePath: Dockerfile
+    dockerContext: .
+    dockerCommand: node services/catalog/server.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: JWT_SECRET
+        sync: false
+      - key: MONGODB_URI
+        sync: false
+
+  - name: ecommerce-orders
+    type: web
+    runtime: docker
+    rootDir: .
+    dockerfilePath: Dockerfile
+    dockerContext: .
+    dockerCommand: node services/orders/server.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: JWT_SECRET
+        sync: false
+      - key: MONGODB_URI
+        sync: false
+
+  - name: ecommerce-payments
+    type: web
+    runtime: docker
+    rootDir: .
+    dockerfilePath: Dockerfile
+    dockerContext: .
+    dockerCommand: node services/payments/server.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: JWT_SECRET
+        sync: false
+      - key: MONGODB_URI
+        sync: false
+
+  - name: ecommerce-notifications
+    type: web
+    runtime: docker
+    rootDir: .
+    dockerfilePath: Dockerfile
+    dockerContext: .
+    dockerCommand: node services/notifications/server.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: JWT_SECRET
+        sync: false
+      - key: MONGODB_URI
+        sync: false
+      - key: EMAIL_USER
+        sync: false
+      - key: EMAIL_PASSWORD
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+
+  - name: ecommerce-admin
+    type: web
+    runtime: docker
+    rootDir: .
+    dockerfilePath: Dockerfile
+    dockerContext: .
+    dockerCommand: node services/admin/server.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: JWT_SECRET
+        sync: false
+      - key: MONGODB_URI
+        sync: false
