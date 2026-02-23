@@ -11,7 +11,7 @@ const { authMiddleware } = require('../../shared/auth');
 const { initializeProducts } = require('../../shared/initProducts');
 
 const app = express();
-const PORT = process.env.CATALOG_PORT || 5002;
+const PORT = process.env.PORT || process.env.CATALOG_PORT || 5002;
 
 app.use(compression());
 app.use(cors());
@@ -125,20 +125,7 @@ app.get('/api/products/search', async (req, res) => {
 
 app.get('/api/products/high-quality-beauty', async (req, res) => {
   try {
-    let products = await Product.find({
-      category: 'Beauty',
-      $or: [{ isFeatured: true }, { isHighQuality: true }],
-    }).limit(20);
-
-    // Fallback: if quality flags are missing in DB, still return beauty products.
-    if (!products || products.length === 0) {
-      products = await Product.find({
-        category: { $regex: '^beauty$', $options: 'i' },
-      })
-        .sort({ rating: -1, sold: -1, createdAt: -1 })
-        .limit(20);
-    }
-
+    const products = await Product.find({ category: 'Beauty', isFeatured: true }).limit(20);
     res.json(products);
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -156,24 +143,7 @@ app.get('/api/products/trending-collection', async (req, res) => {
 
 app.get('/api/products/most-popular', async (req, res) => {
   try {
-    // Saree-first most popular list for HomeScreen.
-    let products = await Product.find({
-      $or: [
-        { subcategory: { $regex: '^sarees?$', $options: 'i' } },
-        { subCategory: { $regex: '^sarees?$', $options: 'i' } },
-        { name: { $regex: 'saree', $options: 'i' } },
-      ],
-    })
-      .sort({ sold: -1, rating: -1, createdAt: -1 })
-      .limit(20);
-
-    // Fallback: if saree-tagged products are missing, return popular products.
-    if (!products || products.length === 0) {
-      products = await Product.find({ isPopular: true })
-        .sort({ sold: -1, rating: -1, createdAt: -1 })
-        .limit(20);
-    }
-
+    const products = await Product.find().sort({ sold: -1 }).limit(20);
     res.json(products);
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -254,3 +224,4 @@ app.get('/api/categories/:id', async (req, res) => {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
+
