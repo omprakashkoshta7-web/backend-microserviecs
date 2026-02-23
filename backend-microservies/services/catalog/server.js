@@ -13,6 +13,24 @@ const { initializeProducts } = require('../../shared/initProducts');
 const app = express();
 const PORT = process.env.PORT || process.env.CATALOG_PORT || 5002;
 
+const curatedSareeImages = [
+  'https://th.bing.com/th/id/OIP.Vhw4sI7_0d2FjigP6W2KjQHaKH?w=186&h=255&c=7&r=0&o=7&dpr=1.3&pid=1.7&rm=3',
+  'https://th.bing.com/th/id/OIP.s5q1ape_TbvunjPIH8RDfwHaRo?w=147&h=350&c=7&r=0&o=7&dpr=1.3&pid=1.7&rm=3',
+  'https://th.bing.com/th/id/OIP.6vRosBqztM6p-ehC_C4ImgHaLH?w=186&h=279&c=7&r=0&o=7&dpr=1.3&pid=1.7&rm=3',
+  'https://th.bing.com/th/id/OIP.mN_EBqy35HAJPDG_auKrAAHaJ4?w=186&h=248&c=7&r=0&o=7&dpr=1.3&pid=1.7&rm=3',
+  'https://th.bing.com/th/id/OIP.55Hgx9ce8Z32PXiAfMs-LgHaJ4?w=186&h=248&c=7&r=0&o=7&dpr=1.3&pid=1.7&rm=3',
+  'https://tse4.mm.bing.net/th/id/OIP.chXP-FGSXZTtIFt0j3nEagAAAA?rs=1&pid=ImgDetMain&o=7&rm=3',
+  'https://th.bing.com/th/id/OIP.x-kiUvhHn0breSnbozGQfQHaJ4?w=186&h=248&c=7&r=0&o=7&dpr=1.3&pid=1.7&rm=3',
+];
+
+const curatedBangleImages = [
+  'https://th.bing.com/th/id/OIP.q7VTK1IVM0SyaAs6Zx2xMwHaEJ?o=7rm=3&rs=1&pid=ImgDetMain&o=7&rm=3',
+  'https://th.bing.com/th/id/OIP.j9Q9PkhYvxlcrQeyq6VF-gHaG4?w=210&h=196&c=7&r=0&o=7&dpr=1.3&pid=1.7&rm=3',
+  'https://th.bing.com/th/id/OIP.ubUW1IAkxBRdrLUfF2hWlQHaE7?w=263&h=180&c=7&r=0&o=7&dpr=1.3&pid=1.7&rm=3',
+  'https://th.bing.com/th/id/OIP.Rpmr205ieSTWJTguOWnrtwHaGZ?w=219&h=189&c=7&r=0&o=7&dpr=1.3&pid=1.7&rm=3',
+  'https://th.bing.com/th/id/OIP.aVwaAvxd3o7Kgn448aWaeAHaHa?w=187&h=194&c=7&r=0&o=7&dpr=1.3&pid=1.7&rm=3',
+];
+
 app.use(compression());
 app.use(cors());
 app.use(bodyParser.json({ limit: '50mb' }));
@@ -20,12 +38,20 @@ app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 
 app.use('/images', express.static(path.join(__dirname, '../../../public/images')));
 
-connectDB().then(() => {
-  initializeProducts();
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Catalog service running on http://localhost:${PORT}`);
+connectDB()
+  .then(() => {
+    initializeProducts().catch((error) => {
+      console.error('Product initialization failed:', error.message);
+    });
+
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`Catalog service running on port ${PORT}`);
+    });
+  })
+  .catch((error) => {
+    console.error('Database connection failed:', error.message);
+    process.exit(1);
   });
-});
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', service: 'catalog' });
@@ -134,7 +160,49 @@ app.get('/api/products/high-quality-beauty', async (req, res) => {
 
 app.get('/api/products/trending-collection', async (req, res) => {
   try {
-    const products = await Product.find({ isTrending: true }).limit(20);
+    // Trending Bangles section: prioritize curated bangle images first.
+    const curated = await Product.find({
+      image: { $in: curatedBangleImages },
+    })
+      .sort({ sold: -1, rating: -1, createdAt: -1 })
+      .limit(20);
+
+    const curatedIds = curated.map((p) => p._id);
+    const remainingSlots = Math.max(20 - curated.length, 0);
+
+    const bangleQuery = {
+      $or: [
+        { subcategory: { $regex: '^bangles?$', $options: 'i' } },
+        { subCategory: { $regex: '^bangles?$', $options: 'i' } },
+        { name: { $regex: 'bangle', $options: 'i' } },
+      ],
+    };
+
+    if (curatedIds.length > 0) {
+      bangleQuery._id = { $nin: curatedIds };
+    }
+
+    const otherBangles = remainingSlots
+      ? await Product.find(bangleQuery)
+          .sort({ sold: -1, rating: -1, createdAt: -1 })
+          .limit(remainingSlots)
+      : [];
+
+    let products = [...curated, ...otherBangles];
+
+    if (!products || products.length === 0) {
+      products = await Product.find({
+        isTrending: true,
+        $or: [
+          { subcategory: { $regex: '^bangles?$', $options: 'i' } },
+          { subCategory: { $regex: '^bangles?$', $options: 'i' } },
+          { name: { $regex: 'bangle', $options: 'i' } },
+        ],
+      })
+        .sort({ sold: -1, rating: -1, createdAt: -1 })
+        .limit(20);
+    }
+
     res.json(products);
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -143,7 +211,41 @@ app.get('/api/products/trending-collection', async (req, res) => {
 
 app.get('/api/products/most-popular', async (req, res) => {
   try {
-    const products = await Product.find().sort({ sold: -1 }).limit(20);
+    const curated = await Product.find({
+      image: { $in: curatedSareeImages },
+    })
+      .sort({ sold: -1, rating: -1, createdAt: -1 })
+      .limit(20);
+
+    const curatedIds = curated.map((p) => p._id);
+    const remainingSlots = Math.max(20 - curated.length, 0);
+
+    const sareeQuery = {
+      $or: [
+        { subcategory: { $regex: '^sarees?$', $options: 'i' } },
+        { subCategory: { $regex: '^sarees?$', $options: 'i' } },
+        { name: { $regex: 'saree', $options: 'i' } },
+      ],
+    };
+
+    if (curatedIds.length > 0) {
+      sareeQuery._id = { $nin: curatedIds };
+    }
+
+    const otherSarees = remainingSlots
+      ? await Product.find(sareeQuery)
+          .sort({ sold: -1, rating: -1, createdAt: -1 })
+          .limit(remainingSlots)
+      : [];
+
+    let products = [...curated, ...otherSarees];
+
+    if (!products || products.length === 0) {
+      products = await Product.find({ isPopular: true })
+        .sort({ sold: -1, rating: -1, createdAt: -1 })
+        .limit(20);
+    }
+
     res.json(products);
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -224,4 +326,3 @@ app.get('/api/categories/:id', async (req, res) => {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
-
