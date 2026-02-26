@@ -10,7 +10,7 @@ const { authMiddleware } = require('../../shared/auth');
 const { sendOrderConfirmation } = require('../../shared/email');
 
 const app = express();
-const PORT = process.env.ORDERS_PORT || 5003;
+const PORT = process.env.PORT || process.env.ORDERS_PORT || 5003;
 
 app.use(compression());
 app.use(cors());
@@ -118,7 +118,7 @@ app.post('/api/wishlist', authMiddleware, async (req, res) => {
 
     const existingItem = await Wishlist.findOne({ userId: req.userId, productId });
     if (existingItem) {
-      return res.status(400).json({ message: 'Product already in wishlist' });
+      return res.status(200).json({ message: 'Product already in wishlist', wishlistItem: existingItem });
     }
 
     const wishlistItem = new Wishlist({ userId: req.userId, productId });
@@ -132,10 +132,20 @@ app.post('/api/wishlist', authMiddleware, async (req, res) => {
 
 app.delete('/api/wishlist/:productId', authMiddleware, async (req, res) => {
   try {
-    const result = await Wishlist.findOneAndDelete({ userId: req.userId, productId: req.params.productId });
-    if (!result) return res.status(404).json({ message: 'Product not in wishlist' });
+    const { productId } = req.params;
+    const userWishlist = await Wishlist.find({ userId: req.userId }).select('_id productId');
 
-    res.json({ message: 'Removed from wishlist' });
+    // Legacy-safe matching: allow delete by wishlist row _id OR productId string.
+    const matchedIds = userWishlist
+      .filter((item) => String(item._id) === productId || String(item.productId) === productId)
+      .map((item) => item._id);
+
+    if (matchedIds.length === 0) {
+      return res.status(404).json({ message: 'Product not in wishlist' });
+    }
+
+    await Wishlist.deleteMany({ userId: req.userId, _id: { $in: matchedIds } });
+    res.json({ message: 'Removed from wishlist', deletedCount: matchedIds.length });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
