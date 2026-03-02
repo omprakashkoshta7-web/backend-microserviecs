@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const compression = require('compression');
+const mongoose = require('mongoose');
 
 const { connectDB } = require('../../shared/db');
 const { Order, Notification, User, Wishlist, Cart, Address, Return } = require('../../shared/models');
@@ -296,6 +297,18 @@ app.post('/api/returns', authMiddleware, async (req, res) => {
       return res.status(400).json({ message: 'Required fields missing' });
     }
 
+    if (!mongoose.Types.ObjectId.isValid(orderId)) {
+      return res.status(400).json({ message: 'Invalid order ID format' });
+    }
+
+    // Validate item productIds if present to avoid CastErrors
+    const invalidItem = items.find(
+      (it) => it.productId && !mongoose.Types.ObjectId.isValid(it.productId)
+    );
+    if (invalidItem) {
+      return res.status(400).json({ message: 'Invalid product ID in items' });
+    }
+
     const returnId = `RET${Date.now()}${Math.floor(Math.random() * 1000)}`;
 
     const returnRequest = new Return({
@@ -330,7 +343,12 @@ app.get('/api/returns/my-returns', authMiddleware, async (req, res) => {
 
 app.get('/api/returns/:id', authMiddleware, async (req, res) => {
   try {
-    const returnRequest = await Return.findById(req.params.id).populate('orderId');
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid return ID format' });
+    }
+
+    const returnRequest = await Return.findById(id).populate('orderId');
     if (!returnRequest) return res.status(404).json({ message: 'Return request not found' });
 
     res.json(returnRequest);
@@ -344,6 +362,7 @@ app.delete('/api/returns/:id', authMiddleware, async (req, res) => {
     const returnRequest = await Return.findOneAndDelete({ _id: req.params.id, userId: req.userId });
     if (!returnRequest) return res.status(404).json({ message: 'Return request not found' });
 
+    
     res.json({ message: 'Return request deleted' });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
