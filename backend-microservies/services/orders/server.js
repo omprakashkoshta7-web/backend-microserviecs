@@ -116,6 +116,10 @@ app.post('/api/wishlist', authMiddleware, async (req, res) => {
   try {
     const { productId } = req.body;
 
+    if (!mongoose.Types.ObjectId.isValid(productId)) {
+      return res.status(400).json({ message: 'Invalid product ID format' });
+    }
+
     const existingItem = await Wishlist.findOne({ userId: req.userId, productId });
     if (existingItem) {
       return res.status(200).json({ message: 'Product already in wishlist', wishlistItem: existingItem });
@@ -133,6 +137,11 @@ app.post('/api/wishlist', authMiddleware, async (req, res) => {
 app.delete('/api/wishlist/:productId', authMiddleware, async (req, res) => {
   try {
     const { productId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(productId)) {
+      return res.status(400).json({ message: 'Invalid product ID format' });
+    }
+
     const userWishlist = await Wishlist.find({ userId: req.userId }).select('_id productId');
 
     // Legacy-safe matching: allow delete by wishlist row _id OR productId string.
@@ -153,7 +162,13 @@ app.delete('/api/wishlist/:productId', authMiddleware, async (req, res) => {
 
 app.get('/api/wishlist/check/:productId', authMiddleware, async (req, res) => {
   try {
-    const exists = await Wishlist.findOne({ userId: req.userId, productId: req.params.productId });
+    const { productId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(productId)) {
+      return res.status(400).json({ exists: false, message: 'Invalid product ID format' });
+    }
+
+    const exists = await Wishlist.findOne({ userId: req.userId, productId });
     res.json({ exists: !!exists });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
