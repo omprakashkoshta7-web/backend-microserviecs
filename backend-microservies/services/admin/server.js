@@ -7,6 +7,7 @@ const compression = require('compression');
 const { connectDB } = require('../../shared/db');
 const { Product, Order, User, Notification, ActivityLog, Category, Return } = require('../../shared/models');
 const { authMiddleware } = require('../../shared/auth');
+const Ticket = require('./models/Ticket');
 
 const app = express();
 const PORT = process.env.ADMIN_PORT || 5006;
@@ -763,5 +764,101 @@ app.post('/api/admin/seed-categories', authMiddleware, async (req, res) => {
     res.json({ message: 'Categories seeded successfully', count: result.length, categories: result });
   } catch (error) {
     res.status(500).json({ message: 'Error seeding categories', error: error.message });
+  }
+});
+
+// Admin Ticket APIs
+app.get('/api/admin/tickets', authMiddleware, async (req, res) => {
+  try {
+    const { status, priority, search, page = 1, limit = 50 } = req.query;
+    let query = {};
+
+    if (status && status !== 'All') query.status = status;
+    if (priority && priority !== 'All') query.priority = priority;
+    if (search) {
+      query.$or = [
+        { ticketId: { $regex: search, $options: 'i' } },
+        { subject: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    const tickets = await Ticket.find(query)
+      .populate('userId', 'name email phone')
+      .sort({ createdAt: -1 })
+      .limit(parseInt(limit))
+      .skip((parseInt(page) - 1) * parseInt(limit));
+
+    const total = await Ticket.countDocuments(query);
+
+    res.json({
+      tickets,
+      total,
+      page: parseInt(page),
+      pages: Math.ceil(total / parseInt(limit))
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+app.get('/api/admin/tickets/:id', authMiddleware, async (req, res) => {
+  try {
+    const ticket = await Ticket.findById(req.params.id).populate('userId', 'name email phone');
+    if (!ticket) return res.status(404).json({ message: 'Ticket not found' });
+    res.json({ ticket });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+app.post('/api/admin/tickets/:id/reply', authMiddleware, async (req, res) => {
+  try {
+    const { text } = req.body;
+    const ticket = await Ticket.findById(req.params.id);
+    if (!ticket) return res.status(404).json({ message: 'Ticket not found' });
+
+    ticket.messages.push({
+      sender: 'admin',
+      text,
+      timestamp: new Date()
+    });
+
+    if (ticket.status === 'Open') {
+      ticket.status = 'In Progress';
+    }
+
+    await ticket.save();
+    res.json({ message: 'Reply sent', ticket });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+app.put('/api/admin/tickets/:id/status', authMiddleware, async (req, res) => {
+  try {
+    const { status } = req.body;
+    const ticket = await Ticket.findById(req.params.id);
+    if (!ticket) return res.status(404).json({ message: 'Ticket not found' });
+
+    ticket.status = status;
+    await ticket.save();
+
+    res.json({ message: 'Ticket status updated', ticket });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+app.put('/api/admin/tickets/:id/escalate', authMiddleware, async (req, res) => {
+  try {
+    const ticket = await Ticket.findById(req.params.id);
+    if (!ticket) return res.status(404).json({ message: 'Ticket not found' });
+
+    ticket.priority = 'High';
+    await ticket.save();
+
+    res.json({ message: 'Ticket escalated', ticket });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
