@@ -647,7 +647,11 @@ app.post('/api/admin/shipments/:id/tracking-event', authMiddleware, async (req, 
 // Admin Returns & Refunds
 app.get('/api/admin/returns', authMiddleware, async (req, res) => {
   try {
-    const returns = await Return.find().sort({ createdAt: -1 });
+    const returns = await Return.find()
+      .populate('userId', 'name email')
+      .populate('orderId', 'trackingId')
+      .populate('items.productId', 'name image price')
+      .sort({ createdAt: -1 });
     res.json({ returns });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
