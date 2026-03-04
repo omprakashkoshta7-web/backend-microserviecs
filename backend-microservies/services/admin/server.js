@@ -862,3 +862,101 @@ app.put('/api/admin/tickets/:id/escalate', authMiddleware, async (req, res) => {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
+
+// ============ CUSTOMER TICKET APIs (Mobile App) ============
+
+// Create Ticket (Customer)
+app.post('/api/tickets', authMiddleware, async (req, res) => {
+  try {
+    const { subject, category, priority, message } = req.body;
+    const userId = req.user.userId;
+
+    // Calculate SLA deadline (24 hours for High, 48 for Medium, 72 for Low)
+    const slaHours = priority === 'High' ? 24 : priority === 'Medium' ? 48 : 72;
+    const slaDeadline = new Date();
+    slaDeadline.setHours(slaDeadline.getHours() + slaHours);
+
+    const ticket = new Ticket({
+      userId,
+      subject,
+      category,
+      priority: priority || 'Medium',
+      status: 'Open',
+      slaDeadline,
+      messages: [
+        {
+          sender: 'customer',
+          text: message,
+          timestamp: new Date()
+        }
+      ]
+    });
+
+    await ticket.save();
+
+    // Populate user details
+    await ticket.populate('userId', 'name email phone');
+
+    res.status(201).json({ message: 'Ticket created successfully', ticket });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Get My Tickets (Customer)
+app.get('/api/tickets/my-tickets', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { status } = req.query;
+
+    let query = { userId };
+    if (status && status !== 'All') query.status = status;
+
+    const tickets = await Ticket.find(query)
+      .populate('userId', 'name email phone')
+      .sort({ createdAt: -1 });
+
+    res.json({ tickets });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Get Single Ticket Detail (Customer)
+app.get('/api/tickets/:id', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const ticket = await Ticket.findOne({ _id: req.params.id, userId })
+      .populate('userId', 'name email phone');
+
+    if (!ticket) return res.status(404).json({ message: 'Ticket not found' });
+
+    res.json({ ticket });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Add Message to Ticket (Customer)
+app.post('/api/tickets/:id/message', authMiddleware, async (req, res) => {
+  try {
+    const { text } = req.body;
+    const userId = req.user.userId;
+
+    const ticket = await Ticket.findOne({ _id: req.params.id, userId });
+    if (!ticket) return res.status(404).json({ message: 'Ticket not found' });
+
+    ticket.messages.push({
+      sender: 'customer',
+      text,
+      timestamp: new Date()
+    });
+
+    await ticket.save();
+    await ticket.populate('userId', 'name email phone');
+
+    res.json({ message: 'Message sent', ticket });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
