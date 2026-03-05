@@ -14,6 +14,7 @@ const app = express();
 const PORT = process.env.PORT || process.env.CATALOG_PORT || 5002;
 
 const curatedSareeImages = [
+  // Original curated images
   'https://th.bing.com/th/id/OIP.Vhw4sI7_0d2FjigP6W2KjQHaKH?w=186&h=255&c=7&r=0&o=7&dpr=1.3&pid=1.7&rm=3',
   'https://th.bing.com/th/id/OIP.s5q1ape_TbvunjPIH8RDfwHaRo?w=147&h=350&c=7&r=0&o=7&dpr=1.3&pid=1.7&rm=3',
   'https://th.bing.com/th/id/OIP.6vRosBqztM6p-ehC_C4ImgHaLH?w=186&h=279&c=7&r=0&o=7&dpr=1.3&pid=1.7&rm=3',
@@ -21,6 +22,15 @@ const curatedSareeImages = [
   'https://th.bing.com/th/id/OIP.55Hgx9ce8Z32PXiAfMs-LgHaJ4?w=186&h=248&c=7&r=0&o=7&dpr=1.3&pid=1.7&rm=3',
   'https://tse4.mm.bing.net/th/id/OIP.chXP-FGSXZTtIFt0j3nEagAAAA?rs=1&pid=ImgDetMain&o=7&rm=3',
   'https://th.bing.com/th/id/OIP.x-kiUvhHn0breSnbozGQfQHaJ4?w=186&h=248&c=7&r=0&o=7&dpr=1.3&pid=1.7&rm=3',
+  // New unique party wear sarees
+  'http://gunjfashion.com/cdn/shop/files/beige-sequins-embroidered-party-wear-saree-in-organza_2.jpg',
+  'http://mysilklove.com/cdn/shop/files/22_d17eddab-0571-4be6-8606-16c641e5f081.jpg',
+  'https://www.fabfunda.com/product-img/women-charming-party-wear-oran-1721123762.jpeg',
+  'https://assets.myntassets.com/w_360,q_50,,dpr_2,fl_progressive,f_webp/assets/images/2025/MAY/19/E0UQb9jL_e8320cf45780408a8e51cfb3d73ba5e9.jpg',
+  'https://cdn.shopaccino.com/nakhrali/products/23-89419750967879_l.jpg',
+  'https://www.latestkurtidesigns.com/wp-content/uploads/2024/04/Rainbow-Silk.jpg',
+  'https://royalanarkali.com/wp-content/uploads/2020/11/party-wear-georgette-sequence-work-saree-for-womens-red.jpg',
+  'http://vootbuy.in/cdn/shop/products/free-01skf-priyanshi-kastbhanjan-fashion-unstitched-original-imagent4zy8ybfz5.webp',
 ];
 
 const curatedBangleImages = [
@@ -222,43 +232,35 @@ app.get('/api/products/trending-collection', async (req, res) => {
 
 app.get('/api/products/most-popular', async (req, res) => {
   try {
-    const curated = await Product.find({
-      image: { $in: curatedSareeImages },
+    // 12 New Saree Image Links - Show these ONLY
+    const new12SareeImages = [
+      'https://encrypted-tbn1.gstatic.com/shopping?q=tbn:ANd9GcSZm4O4bfg6j1A2N30qDAm0aR9hQ3Y5YZC7k25rCawpjg6B3TSLq945YxDNE5lJCXgXsXtLxdHXXwVEjVp87sLMrmM4VR4_g5VtbuKYrc05N_WOjzrCdRA7lnk',
+      'https://encrypted-tbn2.gstatic.com/shopping?q=tbn:ANd9GcTxD4mtz10WG2nuq7arFIwZ9ti8NCVOJ5c6bZXOmu_RESMpBlVD458euwRk3L1eCLlqjSt43NcYkOxh8-NzMHFkoAq4zEubZfvE8ziIXAXj',
+      'https://sureenachowdhri.com/cdn/shop/files/10_5d293c23-94ef-4222-80b3-b51e5282b15f.jpg?v=1751986068&width=3000',
+      'https://encrypted-tbn1.gstatic.com/shopping?q=tbn:ANd9GcRfQSlVsC7AfnqIROfyDB_4RA7iE2a43Jzc2KkS4MZCNadx6PUyBVq8Jrsc4d9gZu7w08wZcjdPfHZiYHBqDVgMYxPqv7GnRbxl12250vNVLkaDQbv4v0VL',
+      'https://encrypted-tbn3.gstatic.com/shopping?q=tbn:ANd9GcRU8V_872kKsO5P4fkBq_f5bG9aXwWxbP-A5MqzasBh3NrXLZVFPcGFV8K04E4iNZgXqKm8dvEYw0S9Ss6wyvIQK8iEx_JM97sopAED15bvxbRbCetQE9GzjA',
+      'https://encrypted-tbn3.gstatic.com/shopping?q=tbn:ANd9GcSBWN1fhZCYfd8IZXtzDH1m88Pmho0DYCWQ4LWRByEFpH5Ez0T0aJxeHuGr79EBQ6SxcekWMb8nwb_jBVyiBIk7t5UiZ2WYsnLFrSAuGvalACChGB2Ws16Q',
+      'https://encrypted-tbn0.gstatic.com/shopping?q=tbn:ANd9GcTGnjml36auw-9frHZuHfUbM7sigcOTSSBl8A5fgciDzd0rfBibE9bpmMYTeyXi4_Ix9OI59moEtzPP65QMYm9kwfYyJCMS8lmVNw-VT_qErH3n-aW466Z8Fw',
+      'https://static.wixstatic.com/media/faf1ba_78c7a05c62a24c61a99d18980455fc89~mv2.jpg/v1/fill/w_526,h_692,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/faf1ba_78c7a05c62a24c61a99d18980455fc89~mv2.jpg',
+      'https://d1311wbk6unapo.cloudfront.net/NushopCatalogue/tr:f-webp,w-1200,fo-auto/6471ab9b79337900129b7293/cat_img/mNjM1qnR_BZK0OIG227_2025-07-29_1.png',
+      'https://laxvani.com/cdn/shop/files/1-Photoroom_92e878f4-bcd8-4f31-b778-91a598ecbe18.png?v=1763395818&width=823',
+      'https://www.rozinaa.com/cdn/shop/files/IMG_0395.png?v=1764841509&width=533',
+      'https://www.rozinaa.com/cdn/shop/files/IMG_1735.png?v=1766978146&width=990'
+    ];
+
+    // Fetch ONLY products with these 12 image links
+    const products = await Product.find({
+      image: { $in: new12SareeImages }
     })
-      .sort({ sold: -1, rating: -1, createdAt: -1 })
-      .limit(20);
+      .sort({ createdAt: -1 }) // Newest first
+      .limit(12)
+      .lean()
+      .exec();
 
-    const curatedIds = curated.map((p) => p._id);
-    const remainingSlots = Math.max(20 - curated.length, 0);
-
-    const sareeQuery = {
-      $or: [
-        { subcategory: { $regex: '^sarees?$', $options: 'i' } },
-        { subCategory: { $regex: '^sarees?$', $options: 'i' } },
-        { name: { $regex: 'saree', $options: 'i' } },
-      ],
-    };
-
-    if (curatedIds.length > 0) {
-      sareeQuery._id = { $nin: curatedIds };
-    }
-
-    const otherSarees = remainingSlots
-      ? await Product.find(sareeQuery)
-          .sort({ sold: -1, rating: -1, createdAt: -1 })
-          .limit(remainingSlots)
-      : [];
-
-    let products = [...curated, ...otherSarees];
-
-    if (!products || products.length === 0) {
-      products = await Product.find({ isPopular: true })
-        .sort({ sold: -1, rating: -1, createdAt: -1 })
-        .limit(20);
-    }
-
+    console.log(`🔥 Most Popular: ${products.length} sarees (12 NEW sarees ONLY)`);
     res.json(products);
   } catch (error) {
+    console.error('Most Popular API error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
