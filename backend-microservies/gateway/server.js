@@ -42,6 +42,8 @@ app.use('/api/payment-methods', createProxyMiddleware({ target: services.payment
 app.use('/api/notifications', createProxyMiddleware({ target: services.notifications, changeOrigin: true }));
 app.use('/api/admin/email-templates', createProxyMiddleware({ target: services.notifications, changeOrigin: true }));
 
+app.use('/api/tickets', createProxyMiddleware({ target: services.admin, changeOrigin: true }));
+
 app.use('/api/admin/coupons', createProxyMiddleware({ target: services.payments, changeOrigin: true }));
 app.use('/api/admin', createProxyMiddleware({ target: services.admin, changeOrigin: true }));
 
