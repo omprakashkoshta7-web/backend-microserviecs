@@ -3,8 +3,8 @@ const mongoose = require('mongoose');
 const ticketSchema = new mongoose.Schema({
   ticketId: {
     type: String,
-    required: true,
-    unique: true
+    unique: true,
+    sparse: true  // Allow null values for unique index
   },
   subject: {
     type: String,
@@ -55,11 +55,17 @@ const ticketSchema = new mongoose.Schema({
 
 // Auto-generate ticket ID
 ticketSchema.pre('save', async function(next) {
-  if (!this.ticketId) {
-    const count = await mongoose.model('Ticket').countDocuments();
-    this.ticketId = `TKT${String(count + 1).padStart(4, '0')}`;
+  if (this.isNew && !this.ticketId) {
+    try {
+      const count = await mongoose.model('Ticket').countDocuments();
+      this.ticketId = `TKT${String(count + 1).padStart(4, '0')}`;
+      next();
+    } catch (error) {
+      next(error);
+    }
+  } else {
+    next();
   }
-  next();
 });
 
 module.exports = mongoose.model('Ticket', ticketSchema);
