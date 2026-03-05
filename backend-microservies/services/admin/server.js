@@ -651,9 +651,23 @@ app.get('/api/admin/returns', authMiddleware, async (req, res) => {
     const returns = await Return.find()
       .populate('userId', 'name email')
       .populate('orderId', 'trackingId')
-      .populate('items.productId', 'name image price')
+      // include both image and images array so frontend can show product photos
+      .populate('items.productId', 'name image images price')
       .sort({ createdAt: -1 });
-    res.json({ returns });
+
+    // Fill item.image fallback from populated product images for legacy data
+    const normalized = returns.map(ret => {
+      const r = ret.toObject({ virtuals: false });
+      r.items = (r.items || []).map(item => {
+        if (!item.image) {
+          item.image = item.productId?.image || item.productId?.images?.[0];
+        }
+        return item;
+      });
+      return r;
+    });
+
+    res.json({ returns: normalized });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
@@ -661,9 +675,20 @@ app.get('/api/admin/returns', authMiddleware, async (req, res) => {
 
 app.get('/api/admin/returns/:id', authMiddleware, async (req, res) => {
   try {
-    const returnRequest = await Return.findById(req.params.id).populate('orderId');
+    const returnRequest = await Return.findById(req.params.id)
+      .populate('orderId', 'trackingId')
+      .populate('items.productId', 'name image images price');
     if (!returnRequest) return res.status(404).json({ message: 'Return request not found' });
-    res.json(returnRequest);
+
+    const ret = returnRequest.toObject();
+    ret.items = (ret.items || []).map(item => {
+      if (!item.image) {
+        item.image = item.productId?.image || item.productId?.images?.[0];
+      }
+      return item;
+    });
+
+    res.json(ret);
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
