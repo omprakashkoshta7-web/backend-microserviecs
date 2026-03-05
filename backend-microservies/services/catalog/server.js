@@ -33,8 +33,8 @@ const curatedBangleImages = [
 
 app.use(compression());
 app.use(cors());
-app.use(bodyParser.json({ limit: '50mb' }));
-app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
+app.use(bodyParser.json({ limit: '1000mb' }));
+app.use(bodyParser.urlencoded({ limit: '1000mb', extended: true }));
 
 app.use('/images', express.static(path.join(__dirname, '../../../public/images')));
 
@@ -151,9 +151,20 @@ app.get('/api/products/search', async (req, res) => {
 
 app.get('/api/products/high-quality-beauty', async (req, res) => {
   try {
-    const products = await Product.find({ category: 'Beauty', isFeatured: true }).limit(20);
+    const products = await Product.find({
+      category: 'Beauty',
+      isHighQuality: true
+    })
+    .select('name price originalPrice discount image images category subcategory rating reviews description inStock brand stock sold tags colors isHighQuality createdAt')
+    .limit(30)
+    .sort({ createdAt: -1 })
+    .lean()
+    .exec();
+
+    console.log(`✨ High Quality Beauty: ${products.length} products (sorted by newest first)`);
     res.json(products);
   } catch (error) {
+    console.error('High Quality Beauty API error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
