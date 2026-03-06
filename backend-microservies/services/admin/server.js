@@ -947,6 +947,25 @@ app.get('/api/tickets/my-tickets', authMiddleware, async (req, res) => {
   }
 });
 
+// Backward-compatible: list tickets (current user). Some clients call /api/tickets expecting their own tickets.
+app.get('/api/tickets', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { status } = req.query;
+
+    const query = { userId };
+    if (status && status !== 'All') query.status = status;
+
+    const tickets = await Ticket.find(query)
+      .populate('userId', 'name email phone')
+      .sort({ createdAt: -1 });
+
+    res.json({ tickets });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 // Get Single Ticket Detail (Customer)
 app.get('/api/tickets/:id', authMiddleware, async (req, res) => {
   try {
