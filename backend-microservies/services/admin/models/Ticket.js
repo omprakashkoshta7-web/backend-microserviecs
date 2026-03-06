@@ -53,18 +53,11 @@ const ticketSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Auto-generate ticket ID
-ticketSchema.pre('save', async function(next) {
+// Auto-generate ticket ID (promise-based, no next callback to avoid "next is not a function")
+ticketSchema.pre('save', async function() {
   if (this.isNew && !this.ticketId) {
-    try {
-      const count = await mongoose.model('Ticket').countDocuments();
-      this.ticketId = `TKT${String(count + 1).padStart(4, '0')}`;
-      next();
-    } catch (error) {
-      next(error);
-    }
-  } else {
-    next();
+    const count = await mongoose.model('Ticket').countDocuments();
+    this.ticketId = `TKT${String(count + 1).padStart(4, '0')}`;
   }
 });
 
