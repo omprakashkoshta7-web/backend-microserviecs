@@ -216,7 +216,14 @@ app.get('/api/admin/stats', authMiddleware, async (req, res) => {
     const curatedProductCount = 6; // matches admin product page curated entries
     const totalProducts = databaseProductCount + curatedProductCount;
 
-    const databaseOutOfStock = await Product.countDocuments({ inStock: false });
+    const databaseOutOfStock = await Product.countDocuments({
+      $or: [
+        { inStock: false },
+        { stock: { $lte: 0 } },
+        { stock: { $exists: false } },
+        { stock: null }
+      ]
+    });
     const databaseInStock = databaseProductCount - databaseOutOfStock;
     const inStock = databaseInStock + curatedProductCount; // curated products are all in stock
     const outOfStock = databaseOutOfStock;
@@ -354,7 +361,9 @@ app.get('/api/admin/categories', authMiddleware, async (req, res) => {
     // Add product count for each category
     const categoriesWithCounts = await Promise.all(
       categories.map(async (category) => {
-        const productCount = await Product.countDocuments({ category: category.name });
+        const productCount = await Product.countDocuments({ 
+          category: { $regex: new RegExp(`^${category.name}$`, 'i') } 
+        });
         return {
           ...category.toObject(),
           productCount
