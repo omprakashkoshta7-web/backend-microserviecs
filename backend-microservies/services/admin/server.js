@@ -216,6 +216,18 @@ app.get('/api/admin/stats', authMiddleware, async (req, res) => {
     const curatedProductCount = 6; // matches admin product page curated entries
     const totalProducts = databaseProductCount + curatedProductCount;
 
+    const databaseOutOfStock = await Product.countDocuments({ inStock: false });
+    const databaseInStock = databaseProductCount - databaseOutOfStock;
+    const inStock = databaseInStock + curatedProductCount; // curated products are all in stock
+    const outOfStock = databaseOutOfStock;
+
+    // Calculate low stock (products with stock <= 10 and > 0)
+    const lowStockProducts = await Product.countDocuments({ 
+      stock: { $gt: 0, $lte: 10 },
+      inStock: true 
+    });
+    const lowStock = lowStockProducts;
+
     const totalRevenue = await Order.aggregate([
       { $group: { _id: null, total: { $sum: '$total' } } }
     ]);
@@ -230,6 +242,9 @@ app.get('/api/admin/stats', authMiddleware, async (req, res) => {
       totalOrders,
       totalUsers,
       totalProducts,
+      inStock,
+      outOfStock,
+      lowStock,
       totalRevenue: totalRevenue[0]?.total || 0,
       ordersByStatus,
       recentOrders,
@@ -335,7 +350,19 @@ app.get('/api/admin/users/:id/activity', authMiddleware, async (req, res) => {
 app.get('/api/admin/categories', authMiddleware, async (req, res) => {
   try {
     const categories = await Category.find().sort({ createdAt: -1 });
-    res.json({ categories });
+
+    // Add product count for each category
+    const categoriesWithCounts = await Promise.all(
+      categories.map(async (category) => {
+        const productCount = await Product.countDocuments({ category: category.name });
+        return {
+          ...category.toObject(),
+          productCount
+        };
+      })
+    );
+
+    res.json({ categories: categoriesWithCounts });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
