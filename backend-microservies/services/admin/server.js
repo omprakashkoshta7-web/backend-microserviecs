@@ -212,7 +212,9 @@ app.get('/api/admin/stats', authMiddleware, async (req, res) => {
   try {
     const totalOrders = await Order.countDocuments();
     const totalUsers = await User.countDocuments();
-    const totalProducts = await Product.countDocuments();
+    const databaseProductCount = await Product.countDocuments();
+    const curatedProductCount = 6; // matches admin product page curated entries
+    const totalProducts = databaseProductCount + curatedProductCount;
 
     const totalRevenue = await Order.aggregate([
       { $group: { _id: null, total: { $sum: '$total' } } }
